@@ -6,6 +6,7 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,7 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
         Random rand = new Random();
 
         //look up index of this parallel task
-        int taskIdx = this.getRuntimeContext().getIndexOfThisSubtask();
+        int taskIdx = this.getRuntimeContext().getTaskInfo().getIndexOfThisSubtask();
 
         ArrayList<Tuple2<String,Double>> curFTemp = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
@@ -29,18 +30,18 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
         }
 
         while(running){
-            curFTemp.stream()
-                    .map(t -> new Tuple2(t.f0,t.f1 + (rand.nextGaussian() * 0.5)))
-                    .collect(Collectors.toList());
+            ArrayList<Tuple2<String, Double>> cur = curFTemp.stream()
+                    .map(i -> new Tuple2<>(i.f0, i.f1 + rand.nextGaussian() * 0.5))
+                    .collect(Collectors.toCollection(ArrayList::new));
 
             long curTime = Calendar.getInstance().getTimeInMillis();
 
             //emit new SensorReading
             for (int i = 0; i < curFTemp.size(); i++) {
-                sourceContext.collect(new SensorReading(curFTemp.get(i).f0,curTime,curFTemp.get(i).f1));
+                sourceContext.collect(new SensorReading(cur.get(i).f0,curTime,cur.get(i).f1));
             }
 
-            Thread.sleep(100);
+            Thread.sleep(100L);
         }
     }
 
