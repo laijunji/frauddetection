@@ -28,7 +28,7 @@ public class ProcessFunctionTimers {
 
         DataStreamSource<SensorReading> readings = env.addSource(new SensorSource());
 
-        SingleOutputStreamOperator<String> warnings = readings.keyBy(i -> i.getId()).process(new TempIncreaseAlertFunction());
+        SingleOutputStreamOperator<String> warnings = readings.keyBy(SensorReading::getId).process(new TempIncreaseAlertFunction());
 
         warnings.print();
 
@@ -47,7 +47,7 @@ class TempIncreaseAlertFunction extends KeyedProcessFunction<String, SensorReadi
     public void onTimer(long timestamp, KeyedProcessFunction<String, SensorReading, String>.OnTimerContext ctx, Collector<String> out) throws Exception {
 
             out.collect("Temperature of sensor '" + ctx.getCurrentKey() +
-                    "' monotonically increased for 1 second.");
+                    "' monotonically increased for 0.5 second.");
             currentTimer.clear();
 
     }
@@ -63,15 +63,18 @@ class TempIncreaseAlertFunction extends KeyedProcessFunction<String, SensorReadi
 
 
         if (prevTemp == null) {
+//            collector.collect("branch_1");
         } else if(sensorReading.getTemperature() < prevTemp && curTimerTimeStamp != null) {
-            collector.collect("branch_2" + context.getCurrentKey() + sensorReading + "prevTemp:" + prevTemp);
+//            collector.collect("branch_2" + context.getCurrentKey() + sensorReading + "prevTemp:" + prevTemp);
             context.timerService().deleteProcessingTimeTimer(curTimerTimeStamp);
             currentTimer.clear();
         }else if(sensorReading.getTemperature() >= prevTemp && curTimerTimeStamp == null){
-            collector.collect("branch_3" + context.getCurrentKey() + sensorReading + "prevTemp:" + prevTemp);
-            long timerTs = context.timerService().currentProcessingTime() + 1000L;
+//            collector.collect("branch_3" + context.getCurrentKey() + sensorReading + "prevTemp:" + prevTemp);
+            long timerTs = context.timerService().currentProcessingTime() + 500L;
             context.timerService().registerProcessingTimeTimer(timerTs);
             currentTimer.update(timerTs);
+        }else {
+//            collector.collect("branch_4" + context.getCurrentKey() + sensorReading + "prevTemp:" + prevTemp);
         }
 
     }
